@@ -1,9 +1,17 @@
-use crate::{
-    common::{PrimOp, VarName},
-    parsing::Span,
-};
+use crate::common::{VarName, BaseOp, CmpOp};
 
-pub type Spanned<T> = (T, Span);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Spanned<T> {
+    pub inner: T,
+    pub span: Span,
+}
+pub type Span = std::ops::Range<usize>;
+
+impl<T> Spanned<T> {
+    pub fn new(expr: T, span: Span) -> Self {
+        Self { inner: expr, span }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Exp {
@@ -12,7 +20,7 @@ pub enum Exp {
     Int(u64),
     Var(VarName),
     Prim {
-        op: PrimOp,
+        op: CoreOp,
         args: Vec<SpannedExp>,
     },
     SetBang {
@@ -36,10 +44,18 @@ pub enum Exp {
     Error,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum CoreOp {
+    Base(BaseOp),
+    Func(VarName),
+    Cmp(CmpOp),
+    Or,
+    And
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Block {
     pub body: Vec<SpannedExp>,
-    pub tail: Box<SpannedExp>,
 }
 
 pub type SpannedExp = Spanned<Exp>;

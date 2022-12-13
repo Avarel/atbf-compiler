@@ -10,6 +10,7 @@ pub enum BaseOp {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CmpOp {
+    Neq,
     Eq,
     Lt,
     Le,
@@ -17,9 +18,3 @@ pub enum CmpOp {
     Ge,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum PrimOp {
-    Base(BaseOp),
-    Func(VarName),
-    Cmp(CmpOp),
-}

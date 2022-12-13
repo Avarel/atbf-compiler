@@ -1,4 +1,13 @@
-use crate::common::{PrimOp, VarName};
+use crate::common::{VarName, CmpOp, BaseOp};
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum CoreOp {
+    Base(BaseOp),
+    Func(VarName),
+    Cmp(CmpOp),
+    Or,
+    And
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Exp {
@@ -7,7 +16,7 @@ pub enum Exp {
     Int(i64),
     Var(VarName),
     Prim {
-        op: PrimOp,
+        op: CoreOp,
         args: Vec<Exp>,
     },
     SetBang {

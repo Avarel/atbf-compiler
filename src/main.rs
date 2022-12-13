@@ -2,23 +2,22 @@ use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
 use chumsky::Parser;
 
 pub mod common;
-pub mod lparse;
 pub mod lwhile;
-pub mod parsing;
+pub mod parser;
 
 fn main() {
     let src = std::fs::read_to_string(std::env::args().nth(1).expect("Expected file argument"))
         .expect("Failed to read file");
 
-    let (tokens, mut errs) = parsing::lexer().parse_recovery(src.as_str());
+    let (tokens, mut errs) = parser::parsing::lexer().parse_recovery(src.as_str());
 
     // println!("{tokens:?}");
 
     let parse_errs = if let Some(tokens) = tokens {
         //dbg!(tokens);
         let len = src.chars().count();
-        let (ast, parse_errs) =
-            parsing::expr_parser().parse_recovery(chumsky::Stream::from_iter(len..len + 1, tokens.into_iter()));
+        let (ast, parse_errs) = parser::parsing::expr_parser()
+            .parse_recovery(chumsky::Stream::from_iter(len..len + 1, tokens.into_iter()));
 
         dbg!(ast);
         // if let Some(funcs) = ast.filter(|_| errs.len() + parse_errs.len() == 0) {
