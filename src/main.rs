@@ -2,7 +2,7 @@ use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
 use chumsky::Parser;
 use parser::lang_parse::{self, Spanned};
 
-use crate::passes::{despan::despan, shrink::shrink, uniquify::uniquify, uncover_get::uncover_get};
+use crate::passes::{despan::despan, shrink::shrink, uniquify::uniquify, uncover_get::uncover_get, remove_complex::remove_complex};
 
 pub mod common;
 pub mod langs;
@@ -15,6 +15,7 @@ fn main() {
     let ast = shrink(ast);
     let ast = uniquify(ast);
     let ast = uncover_get(ast);
+    let ast = remove_complex(ast);
     dbg!(ast);
 }
 

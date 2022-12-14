@@ -2,20 +2,13 @@ use crate::common::{UnOp, VarName};
 
 pub use super::lang_shrink::CoreOp;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Atm {
     Void,
     Bool(bool),
     Int(i64),
     Var(VarName),
 }
-
-// | Atm     of atm
-// | Prim    of core_op * atm list
-// | SetBang of var * exp
-// | Begin   of exp list * exp
-// | If      of exp * exp * exp
-// | While   of exp * exp
-// | Let     of var * exp * exp
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Exp {

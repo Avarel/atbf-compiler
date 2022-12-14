@@ -4,35 +4,37 @@ use crate::common::VarName;
 
 use crate::langs::lang_get as lout;
 use crate::langs::lang_shrink as lin;
+type In = lin::Exp;
+type Out = lout::Exp;
 
-fn collect_set_vars(exp: &lin::Exp) -> HashSet<VarName> {
-    fn inner(exp: &lin::Exp, set: &mut HashSet<VarName>) {
+fn collect_set_vars(exp: &In) -> HashSet<VarName> {
+    fn inner(exp: &In, set: &mut HashSet<VarName>) {
         match exp {
-            lin::Exp::Void => (),
-            lin::Exp::Bool(_) => (),
-            lin::Exp::Int(_) => (),
-            lin::Exp::Var(_) => (),
-            lin::Exp::Block { body } => body.into_iter().for_each(|a| inner(a, set)),
-            lin::Exp::If { cond, then_, else_ } => {
+            In::Void => (),
+            In::Bool(_) => (),
+            In::Int(_) => (),
+            In::Var(_) => (),
+            In::Block { body } => body.into_iter().for_each(|a| inner(a, set)),
+            In::If { cond, then_, else_ } => {
                 inner(cond, set);
                 inner(then_, set);
                 inner(else_, set)
             }
-            lin::Exp::While { cond, body } => {
+            In::While { cond, body } => {
                 inner(cond, set);
                 inner(body, set)
             }
-            lin::Exp::Let { expr, .. } => inner(expr, set),
-            lin::Exp::Set { var, expr } => {
+            In::Let { expr, .. } => inner(expr, set),
+            In::Set { var, expr } => {
                 set.insert(var.clone());
                 inner(expr, set);
             }
-            lin::Exp::Call { args, .. } => args.into_iter().for_each(|a| inner(a, set)),
-            lin::Exp::BinOp { left, right, .. } => {
+            In::Call { args, .. } => args.into_iter().for_each(|a| inner(a, set)),
+            In::BinOp { left, right, .. } => {
                 inner(left, set);
                 inner(right, set)
             }
-            lin::Exp::UnOp { arg, .. } => inner(arg, set),
+            In::UnOp { arg, .. } => inner(arg, set),
         }
     }
 
@@ -41,13 +43,11 @@ fn collect_set_vars(exp: &lin::Exp) -> HashSet<VarName> {
     set
 }
 
-fn uncover_box(b: Box<lin::Exp>, set: &HashSet<VarName>) -> Box<lout::Exp> {
+fn uncover_box(b: Box<In>, set: &HashSet<VarName>) -> Box<Out> {
     Box::new(uncover_get_exp(*b, set))
 }
 
-fn uncover_get_exp(exp: lin::Exp, set: &HashSet<VarName>) -> lout::Exp {
-    type In = lin::Exp;
-    type Out = lout::Exp;
+fn uncover_get_exp(exp: In, set: &HashSet<VarName>) -> Out {
     match exp {
         In::Void => Out::Void,
         In::Bool(b) => Out::Bool(b),

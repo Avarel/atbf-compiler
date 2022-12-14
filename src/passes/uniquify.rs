@@ -2,34 +2,52 @@ use std::collections::HashMap;
 
 use crate::langs::lang_shrink as lang;
 
-#[derive(Clone)]
-struct UniquifyState {
-    counter: HashMap<String, i32>,
+struct UniquifyState<'a> {
+    parent: Option<&'a Self>,
+    counter: HashMap<String, u32>,
     m: HashMap<String, String>,
 }
 
-impl UniquifyState {
+impl<'a> UniquifyState<'a> {
     fn new() -> Self {
         Self {
+            parent: None,
             counter: HashMap::new(),
             m: HashMap::new(),
         }
     }
 
+    fn get_count(&self, base: &str) -> u32 {
+        self.counter.get(base).copied().unwrap_or_else(|| {
+            if let Some(parent) = self.parent {
+                parent.get_count(base)
+            } else {
+                0
+            }
+        })
+    }
+
     fn fresh_name(&mut self, base: String) -> String {
-        let name = if let Some(count) = self.counter.get_mut(&base) {
-            *count += 1;
-            format!("{base}.{count}")
-        } else {
-            self.counter.insert(base.to_owned(), 1);
-            format!("{base}.1")
-        };
+        let count = self.get_count(&base) + 1;
+        self.counter.insert(base.to_owned(), count);
+        let name = format!("{base}.{count}");
         self.m.insert(base, name.clone());
         name
     }
 
     fn get_name(&self, base: &str) -> String {
-        self.m.get(base).expect("no name?").to_owned()
+        self.m
+            .get(base)
+            .cloned()
+            .unwrap_or_else(|| self.parent.expect("no name?").get_name(base))
+    }
+
+    fn scope_in(&'a self) -> Self {
+        Self {
+            parent: Some(self),
+            counter: HashMap::new(),
+            m: HashMap::new(),
+        }
     }
 }
 
@@ -49,38 +67,38 @@ fn uniq(exp: lang::Exp, state: &mut UniquifyState) -> lang::Exp {
             name,
             args: args
                 .into_iter()
-                .map(|e| uniq(e, &mut state.clone()))
+                .map(|e| uniq(e, &mut state.scope_in()))
                 .collect(),
         },
         In::BinOp { op, left, right } => Out::BinOp {
             op,
-            left: uniq_box(left, state),
-            right: uniq_box(right, state),
+            left: uniq_box(left, &mut state.scope_in()),
+            right: uniq_box(right, &mut state.scope_in()),
         },
         In::UnOp { op, arg } => Out::UnOp {
             op,
-            arg: uniq_box(arg, state),
+            arg: uniq_box(arg, &mut state.scope_in()),
         },
         In::Block { body } => Out::Block {
             body: body.into_iter().map(|e| uniq(e, state)).collect(),
         },
         In::If { cond, then_, else_ } => Out::If {
-            cond: uniq_box(cond, state),
-            then_: uniq_box(then_, state),
-            else_: uniq_box(else_, state),
+            cond: uniq_box(cond, &mut state.scope_in()),
+            then_: uniq_box(then_, &mut state.scope_in()),
+            else_: uniq_box(else_, &mut state.scope_in()),
         },
         In::While { cond, body } => Out::While {
-            cond: uniq_box(cond, state),
-            body: uniq_box(body, state),
+            cond: uniq_box(cond, &mut state.scope_in()),
+            body: uniq_box(body, &mut state.scope_in()),
         },
         In::Let { var, expr } => {
-            let expr = uniq_box(expr, state);
+            let expr = uniq_box(expr, &mut state.scope_in());
             let var = state.fresh_name(var);
             Out::Let { var, expr }
         }
         In::Set { var, expr } => Out::Set {
             var: state.get_name(&var),
-            expr: uniq_box(expr, state),
+            expr: uniq_box(expr, &mut state.scope_in()),
         },
     }
 }
