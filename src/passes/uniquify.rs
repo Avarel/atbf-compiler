@@ -82,6 +82,10 @@ fn uniq(exp: lang::Exp, state: &mut UniquifyState) -> lang::Exp {
             let var = state.fresh_name(var);
             Out::Let { var, expr }
         }
+        In::Set { var, expr } => Out::Set {
+            var: state.get_name(&var),
+            expr: uniq_box(expr, state),
+        },
     }
 }
 

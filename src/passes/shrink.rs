@@ -78,5 +78,9 @@ pub fn shrink(exp: lin::Exp) -> lout::Exp {
             var,
             expr: shrink_box(expr),
         },
+        In::Set { var, expr } => Out::Set {
+            var,
+            expr: shrink_box(expr),
+        },
     }
 }

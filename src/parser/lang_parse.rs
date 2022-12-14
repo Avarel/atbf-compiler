@@ -39,6 +39,10 @@ pub enum Exp {
         var: VarName,
         expr: Box<SpannedExp>,
     },
+    Set {
+        var: VarName,
+        expr: Box<SpannedExp>,
+    },
     Call {
         name: VarName,
         args: Vec<SpannedExp>,

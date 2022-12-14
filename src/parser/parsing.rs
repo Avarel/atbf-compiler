@@ -284,7 +284,12 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
 
             let and = compare
                 .clone()
-                .then(just(Token::Op(OpToken::And)).then(compare).repeated())
+                .then(
+                    just(Token::Op(OpToken::And))
+                        .ignored()
+                        .then(compare)
+                        .repeated(),
+                )
                 .foldl(|a, (_, b)| {
                     let span = a.span.start..b.span.end;
                     Spanned::new(
@@ -299,7 +304,7 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
 
             let or = and
                 .clone()
-                .then(just(Token::Op(OpToken::Or)).then(and).repeated())
+                .then(just(Token::Op(OpToken::Or)).ignored().then(and).repeated())
                 .foldl(|a, (_, b)| {
                     let span = a.span.start..b.span.end;
                     Spanned::new(
@@ -333,6 +338,16 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
             })
             .map_with_span(spanner);
 
+        // A let expression
+        let set_expr = ident
+            .then_ignore(just(Token::Assign))
+            .then(raw_expr.clone().or(block.clone()))
+            .map(|(name, val)| Exp::Set {
+                var: name,
+                expr: Box::new(val),
+            })
+            .map_with_span(spanner);
+
         let if_expr = recursive(|if_| {
             just(Token::If)
                 .ignore_then(expr.clone())
@@ -358,31 +373,68 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                 })
         });
 
+        let while_expr = just(Token::While)
+            .ignore_then(expr.clone())
+            .then(block.clone())
+            .map_with_span(|(cond, a), span: Span| {
+                Spanned::new(
+                    Exp::While {
+                        cond: Box::new(cond),
+                        body: Box::new(a),
+                    },
+                    span,
+                )
+            });
+
         // Both blocks and `if` are 'block expressions' and can appear in the place of statements
-        let block_expr = choice((block, if_expr, let_expr)).labelled("block");
+        let block_expr = choice((block, if_expr, while_expr, let_expr, set_expr)).labelled("block");
 
         block_expr
             // Expressions, chained by semicolons, are statements
             .or(raw_expr.clone())
-            .then(just(Token::Ctrl(';')).ignore_then(expr.or_not()).repeated())
-            .foldl(|a, b| {
-                if let Some(b) = b {
-                    let span = a.span.start..b.span.end;
+            // .separated_by(just(Token::Ctrl(';')))
+            // .map(|mut z: Vec<SpannedExp>| {
+            //     if z.len() == 1 {
+            //         z.remove(0)
+            //     } else {
+            //         let span = z.first().unwrap().span.start..z.last().unwrap().span.end;
+            //         Spanned::new(Exp::Block { body: { z } }, span)
+            //     }
+            // })
+            .then(just(Token::Ctrl(';')).ignore_then(expr).repeated())
+            .map(|(a, mut v)| {
+                if v.is_empty() {
+                    a
+                } else {
+                    let span = a.span.start..v.last().unwrap().span.end;
                     Spanned::new(
-                        match b.inner {
-                            Exp::Block { mut body } => Exp::Block {
-                                body: {
-                                    body.insert(0, a);
-                                    body
-                                },
+                        Exp::Block {
+                            body: {
+                                v.insert(0, a);
+                                v
                             },
-                            _ => Exp::Block { body: vec![a, b] },
                         },
                         span,
                     )
-                } else {
-                    a
                 }
             })
+        // .foldr(|a, b| {
+        //     if let Some(b) = b {
+        //         let span = a.span.start..b.span.end;
+        //         Spanned::new(
+        //             match b.inner {
+        //                 Exp::Block { mut body } => Exp::Block {
+        //                     body: {
+        //                         body.push(b)
+        //                     },
+        //                 },
+        //                 _ => Exp::Block { body: vec![a, b] },
+        //             },
+        //             span,
+        //         )
+        //     } else {
+        //         a
+        //     }
+        // })
     })
 }

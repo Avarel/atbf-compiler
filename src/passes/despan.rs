@@ -47,6 +47,10 @@ pub fn despan(exp: Spanned<lin::Exp>) -> lout::Exp {
             var,
             expr: despan_box(expr),
         },
+        In::Set { var, expr } => Out::Set {
+            var,
+            expr: despan_box(expr)
+        },
         In::Call { name, args } => Out::Call {
             name,
             args: args.into_iter().map(despan).collect(),

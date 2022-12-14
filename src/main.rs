@@ -23,7 +23,8 @@ fn parse() -> Option<Spanned<lang_parse::Exp>> {
 
     let (tokens, errs) = parser::parsing::lexer().parse_recovery(src.as_str());
 
-    // println!("{tokens:?}");
+    println!("{tokens:?}");
+    // panic!("done!");
 
     let (ast, parse_errs) = if let Some(tokens) = tokens {
         //dbg!(tokens);
