@@ -1,4 +1,4 @@
-use crate::common::{VarName, BaseOp, CmpOp};
+use crate::common::{VarName, BaseOp, CmpOp, UnOp};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Spanned<T> {
@@ -17,17 +17,15 @@ impl<T> Spanned<T> {
 pub enum Exp {
     Void,
     Bool(bool),
-    Int(u64),
+    Int(i64),
     Var(VarName),
-    Prim {
-        op: CoreOp,
-        args: Vec<SpannedExp>,
-    },
     SetBang {
         var: VarName,
         expr: Box<SpannedExp>,
     },
-    Block(Block),
+    Block {
+        body: Vec<SpannedExp>,
+    },
     If {
         cond: Box<SpannedExp>,
         then_: Box<SpannedExp>,
@@ -41,21 +39,28 @@ pub enum Exp {
         var: VarName,
         expr: Box<SpannedExp>,
     },
+    Call {
+        name: VarName,
+        args: Vec<SpannedExp>,
+    },
+    BinOp {
+        op: CoreOp,
+        left: Box<SpannedExp>,
+        right: Box<SpannedExp>
+    },
+    UnOp {
+        op: UnOp,
+        arg: Box<SpannedExp>,
+    },
     Error,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CoreOp {
     Base(BaseOp),
-    Func(VarName),
     Cmp(CmpOp),
     Or,
     And
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Block {
-    pub body: Vec<SpannedExp>,
 }
 
 pub type SpannedExp = Spanned<Exp>;

@@ -1,40 +1,39 @@
 use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
 use chumsky::Parser;
+use parser::lang_parse::{self, Spanned};
+
+use crate::passes::{despan::despan, shrink::shrink, uniquify::uniquify};
 
 pub mod common;
-pub mod lwhile;
+pub mod langs;
 pub mod parser;
+pub mod passes;
 
 fn main() {
+    let ast = parse().expect("Parse failure");
+    let ast = despan(ast);
+    let ast = shrink(ast);
+    let ast = uniquify(ast);
+    dbg!(ast);
+}
+
+fn parse() -> Option<Spanned<lang_parse::Exp>> {
     let src = std::fs::read_to_string(std::env::args().nth(1).expect("Expected file argument"))
         .expect("Failed to read file");
 
-    let (tokens, mut errs) = parser::parsing::lexer().parse_recovery(src.as_str());
+    let (tokens, errs) = parser::parsing::lexer().parse_recovery(src.as_str());
 
     // println!("{tokens:?}");
 
-    let parse_errs = if let Some(tokens) = tokens {
+    let (ast, parse_errs) = if let Some(tokens) = tokens {
         //dbg!(tokens);
         let len = src.chars().count();
         let (ast, parse_errs) = parser::parsing::expr_parser()
             .parse_recovery(chumsky::Stream::from_iter(len..len + 1, tokens.into_iter()));
 
-        dbg!(ast);
-        // if let Some(funcs) = ast.filter(|_| errs.len() + parse_errs.len() == 0) {
-        //     if let Some(main) = funcs.get("main") {
-        //         assert_eq!(main.args.len(), 0);
-        //         match eval_expr(&main.body, &funcs, &mut Vec::new()) {
-        //             Ok(val) => println!("Return value: {}", val),
-        //             Err(e) => errs.push(Simple::custom(e.span, e.msg)),
-        //         }
-        //     } else {
-        //         panic!("No main function!");
-        //     }
-        // }
-
-        parse_errs
+        (ast, parse_errs)
     } else {
-        Vec::new()
+        (None, Vec::new())
     };
 
     errs.into_iter()
@@ -106,4 +105,6 @@ fn main() {
 
             report.finish().print(Source::from(&src)).unwrap();
         });
+
+    ast
 }

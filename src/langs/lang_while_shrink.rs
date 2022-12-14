@@ -1,12 +1,10 @@
-use crate::common::{VarName, CmpOp, BaseOp};
+use crate::common::{VarName, CmpOp, BaseOp, UnOp};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CoreOp {
     Base(BaseOp),
     Func(VarName),
     Cmp(CmpOp),
-    Or,
-    And
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -15,17 +13,12 @@ pub enum Exp {
     Bool(bool),
     Int(i64),
     Var(VarName),
-    Prim {
-        op: CoreOp,
-        args: Vec<Exp>,
-    },
     SetBang {
         var: VarName,
         expr: Box<Exp>,
     },
-    Begin {
+    Block {
         body: Vec<Exp>,
-        tail: Box<Exp>,
     },
     If {
         cond: Box<Exp>,
@@ -39,5 +32,18 @@ pub enum Exp {
     Let {
         var: VarName,
         expr: Box<Exp>,
+    },
+    Call {
+        name: VarName,
+        args: Vec<Exp>,
+    },
+    BinOp {
+        op: CoreOp,
+        left: Box<Exp>,
+        right: Box<Exp>
+    },
+    UnOp {
+        op: UnOp,
+        arg: Box<Exp>,
     },
 }

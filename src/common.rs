@@ -4,6 +4,10 @@ pub type VarName = String;
 pub enum BaseOp {
     Add,
     Sub,
+}
+
+#[derive(Clone, Copy,  Debug, PartialEq, Eq, Hash)]
+pub enum UnOp {
     Not,
     Negate,
 }
@@ -18,3 +22,6 @@ pub enum CmpOp {
     Ge,
 }
 
+pub fn map_box<T, R>(b: Box<T>, f: impl FnOnce(T) -> R) -> Box<R> {
+    Box::new(f(*b))
+}

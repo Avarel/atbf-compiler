@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
 
-use crate::common::{BaseOp, CmpOp};
-use crate::parser::lang_parse::{self, Block, Exp, Span};
+use crate::common::{BaseOp, CmpOp, UnOp};
+use crate::parser::lang_parse::{self, Exp, Span};
 use crate::parser::lang_parse::{Spanned, SpannedExp};
 
 use super::lang_parse::CoreOp;
@@ -13,7 +13,7 @@ pub enum OpToken {
     Add,
     Sub,
     // logical
-    Negate,
+    Not,
     And,
     Or,
     // comparisons
@@ -33,7 +33,7 @@ impl std::fmt::Display for OpToken {
             match self {
                 OpToken::Add => "+",
                 OpToken::Sub => "-",
-                OpToken::Negate => "!",
+                OpToken::Not => "!",
                 OpToken::Eq => "==",
                 OpToken::Neq => "!=",
                 OpToken::Lt => "<",
@@ -86,12 +86,11 @@ pub fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
         .map(Token::Num);
 
     // A parser for operators
-
     let op = choice((
         just("+").to(OpToken::Add),
         just("-").to(OpToken::Sub),
-        just("!").to(OpToken::Negate),
         just("!=").to(OpToken::Neq),
+        just("!").to(OpToken::Not),
         just("==").to(OpToken::Eq),
         just("<=").to(OpToken::Le),
         just(">=").to(OpToken::Ge),
@@ -144,30 +143,63 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
         },
     );
 
-    let spanner = |expr: Exp, span: Span| Spanned { inner: expr, span };
+    let token_spanner = |token: Token, span: Span| Spanned::new(token, span);
+    let spanner = |expr: Exp, span: Span| Spanned::new(expr, span);
 
     recursive(|expr: Recursive<Token, SpannedExp, _>| {
         let ident = select! { Token::Ident(ident) => ident.clone() }.labelled("identifier");
 
         let raw_expr = {
-            let val = select! {
+            let val_expr = select! {
                 Token::Bool(x) => lang_parse::Exp::Bool(x),
                 Token::Num(n) => lang_parse::Exp::Int(n.parse().unwrap()),
             }
-            .labelled("value");
+            .labelled("value")
+            .map_with_span(spanner);
 
+            let var_expr = ident.map(Exp::Var).map_with_span(spanner);
+
+            // (raw_expr)
             let paren_expr = expr
                 .clone()
                 .delimited_by(just(Token::Ctrl('(')), just(Token::Ctrl(')')));
 
+            // !raw_expr
+            let not_expr = just(Token::Op(OpToken::Not))
+                .map_with_span(token_spanner)
+                .then(expr.clone())
+                .map(|(n, arg)| {
+                    let span = n.span.start..arg.span.end;
+                    Spanned::new(
+                        Exp::UnOp {
+                            op: UnOp::Not,
+                            arg: Box::new(arg),
+                        },
+                        span,
+                    )
+                });
+
+            // -raw_expr
+            let neg_expr = just(Token::Op(OpToken::Sub))
+                .map_with_span(token_spanner)
+                .then(expr.clone())
+                .map(|(n, arg)| {
+                    let span = n.span.start..arg.span.end;
+                    Spanned::new(
+                        Exp::UnOp {
+                            op: UnOp::Negate,
+                            arg: Box::new(arg),
+                        },
+                        span,
+                    )
+                });
+
             // 'Atoms' are expressions that contain no ambiguity
-            let atom = choice((val, ident.map(Exp::Var)))
-                .map_with_span(spanner)
-                // Atoms can also just be normal expressions, but surrounded with parentheses
-                .or(paren_expr)
+            let atom = choice((val_expr, var_expr, paren_expr, neg_expr, not_expr))
                 // Attempt to recover anything that looks like a parenthesised expression but contains errors
                 .recover_with(delimiter_recovery.clone());
 
+            // expr [, expr[,]]
             let items = expr
                 .clone()
                 .separated_by(just(Token::Ctrl(',')))
@@ -184,8 +216,8 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                 .map(|(f, args)| {
                     let span = f.span.start..args.span.end;
                     Spanned::new(
-                        Exp::Prim {
-                            op: CoreOp::Func(f.inner),
+                        Exp::Call {
+                            name: f.inner,
                             args: args.inner,
                         },
                         span,
@@ -217,9 +249,10 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                 .foldl(|a, (op, b)| {
                     let span = a.span.start..b.span.end;
                     Spanned::new(
-                        Exp::Prim {
+                        Exp::BinOp {
                             op: CoreOp::Base(op),
-                            args: vec![a, b],
+                            left: Box::new(a),
+                            right: Box::new(b),
                         },
                         span,
                     )
@@ -240,9 +273,10 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                 .foldl(|a, (op, b)| {
                     let span = a.span.start..b.span.end;
                     Spanned::new(
-                        Exp::Prim {
+                        Exp::BinOp {
                             op: CoreOp::Cmp(op),
-                            args: vec![a, b],
+                            left: Box::new(a),
+                            right: Box::new(b),
                         },
                         span,
                     )
@@ -254,9 +288,10 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                 .foldl(|a, (_, b)| {
                     let span = a.span.start..b.span.end;
                     Spanned::new(
-                        Exp::Prim {
+                        Exp::BinOp {
                             op: CoreOp::And,
-                            args: vec![a, b],
+                            left: Box::new(a),
+                            right: Box::new(b),
                         },
                         span,
                     )
@@ -268,9 +303,10 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                 .foldl(|a, (_, b)| {
                     let span = a.span.start..b.span.end;
                     Spanned::new(
-                        Exp::Prim {
+                        Exp::BinOp {
                             op: CoreOp::Or,
-                            args: vec![a, b],
+                            left: Box::new(a),
+                            right: Box::new(b),
                         },
                         span,
                     )
@@ -334,13 +370,13 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                     let span = a.span.start..b.span.end;
                     Spanned::new(
                         match b.inner {
-                            Exp::Block(Block { mut body }) => Exp::Block(Block {
+                            Exp::Block { mut body } => Exp::Block {
                                 body: {
                                     body.insert(0, a);
                                     body
                                 },
-                            }),
-                            _ => Exp::Block(Block { body: vec![a, b] }),
+                            },
+                            _ => Exp::Block { body: vec![a, b] },
                         },
                         span,
                     )
