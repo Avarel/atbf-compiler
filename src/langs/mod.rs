@@ -1,2 +1,3 @@
-pub mod lang_while;
-pub mod lang_while_shrink;
+pub mod lang;
+pub mod lang_shrink;
+pub mod lang_get;

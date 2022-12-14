@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::langs::lang_while_shrink as lang;
+use crate::langs::lang_shrink as lang;
 
 #[derive(Clone)]
 struct UniquifyState {
@@ -60,10 +60,6 @@ fn uniq(exp: lang::Exp, state: &mut UniquifyState) -> lang::Exp {
         In::UnOp { op, arg } => Out::UnOp {
             op,
             arg: uniq_box(arg, state),
-        },
-        In::SetBang { var, expr } => Out::SetBang {
-            var,
-            expr: uniq_box(expr, state),
         },
         In::Block { body } => Out::Block {
             body: body.into_iter().map(|e| uniq(e, state)).collect(),

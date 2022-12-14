@@ -1,7 +1,7 @@
 use crate::common::map_box;
 use crate::parser::lang_parse::Spanned;
 
-use crate::langs::lang_while as lout;
+use crate::langs::lang as lout;
 use crate::parser::lang_parse as lin;
 
 fn convert_op(op: lin::CoreOp) -> lout::CoreOp {
@@ -27,10 +27,6 @@ pub fn despan(exp: Spanned<lin::Exp>) -> lout::Exp {
         In::Bool(b) => Out::Bool(b),
         In::Int(i) => Out::Int(i),
         In::Var(v) => Out::Var(v),
-        In::SetBang { var, expr } => Out::SetBang {
-            var,
-            expr: despan_box(expr),
-        },
         In::Block { body } => Out::Block {
             body: body.into_iter().map(despan).collect(),
         },

@@ -1,7 +1,7 @@
 use crate::common::map_box;
 
-use crate::langs::lang_while as lin;
-use crate::langs::lang_while_shrink as lout;
+use crate::langs::lang as lin;
+use crate::langs::lang_shrink as lout;
 
 fn convert_op(op: lin::CoreOp) -> lout::CoreOp {
     type In = lin::CoreOp;
@@ -57,10 +57,6 @@ pub fn shrink(exp: lin::Exp) -> lout::Exp {
         In::UnOp { op, arg } => Out::UnOp {
             op,
             arg: shrink_box(arg),
-        },
-        In::SetBang { var, expr } => Out::SetBang {
-            var,
-            expr: shrink_box(expr),
         },
         In::Block { body } => Out::Block {
             body: body.into_iter().map(shrink).collect(),

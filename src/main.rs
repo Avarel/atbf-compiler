@@ -2,7 +2,7 @@ use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
 use chumsky::Parser;
 use parser::lang_parse::{self, Spanned};
 
-use crate::passes::{despan::despan, shrink::shrink, uniquify::uniquify};
+use crate::passes::{despan::despan, shrink::shrink, uniquify::uniquify, uncover_get::uncover_get};
 
 pub mod common;
 pub mod langs;
@@ -14,6 +14,7 @@ fn main() {
     let ast = despan(ast);
     let ast = shrink(ast);
     let ast = uniquify(ast);
+    let ast = uncover_get(ast);
     dbg!(ast);
 }
 

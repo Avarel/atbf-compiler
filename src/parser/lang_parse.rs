@@ -19,10 +19,6 @@ pub enum Exp {
     Bool(bool),
     Int(i64),
     Var(VarName),
-    SetBang {
-        var: VarName,
-        expr: Box<SpannedExp>,
-    },
     Block {
         body: Vec<SpannedExp>,
     },

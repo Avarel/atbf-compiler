@@ -392,15 +392,6 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
         block_expr
             // Expressions, chained by semicolons, are statements
             .or(raw_expr.clone())
-            // .separated_by(just(Token::Ctrl(';')))
-            // .map(|mut z: Vec<SpannedExp>| {
-            //     if z.len() == 1 {
-            //         z.remove(0)
-            //     } else {
-            //         let span = z.first().unwrap().span.start..z.last().unwrap().span.end;
-            //         Spanned::new(Exp::Block { body: { z } }, span)
-            //     }
-            // })
             .then(just(Token::Ctrl(';')).ignore_then(expr).repeated())
             .map(|(a, mut v)| {
                 if v.is_empty() {
@@ -418,23 +409,5 @@ pub fn expr_parser() -> impl Parser<Token, SpannedExp, Error = Simple<Token>> {
                     )
                 }
             })
-        // .foldr(|a, b| {
-        //     if let Some(b) = b {
-        //         let span = a.span.start..b.span.end;
-        //         Spanned::new(
-        //             match b.inner {
-        //                 Exp::Block { mut body } => Exp::Block {
-        //                     body: {
-        //                         body.push(b)
-        //                     },
-        //                 },
-        //                 _ => Exp::Block { body: vec![a, b] },
-        //             },
-        //             span,
-        //         )
-        //     } else {
-        //         a
-        //     }
-        // })
     })
 }
