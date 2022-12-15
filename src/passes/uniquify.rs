@@ -65,40 +65,40 @@ fn uniq(exp: lang::Exp, state: &mut UniquifyState) -> lang::Exp {
         In::Var(v) => Out::Var(state.get_name(&v)),
         In::Call { name, args } => Out::Call {
             name,
-            args: args
-                .into_iter()
-                .map(|e| uniq(e, &mut state.scope_in()))
-                .collect(),
+            args: args.into_iter().map(|e| uniq(e, state)).collect(),
         },
         In::BinOp { op, left, right } => Out::BinOp {
             op,
-            left: uniq_box(left, &mut state.scope_in()),
-            right: uniq_box(right, &mut state.scope_in()),
+            left: uniq_box(left, state),
+            right: uniq_box(right, state),
         },
         In::UnOp { op, arg } => Out::UnOp {
             op,
-            arg: uniq_box(arg, &mut state.scope_in()),
+            arg: uniq_box(arg, state),
         },
-        In::Block { body } => Out::Block {
-            body: body.into_iter().map(|e| uniq(e, state)).collect(),
-        },
+        In::Block { body } => {
+            let state = &mut state.scope_in();
+            Out::Block {
+                body: body.into_iter().map(|e| uniq(e, state)).collect(),
+            }
+        }
         In::If { cond, then_, else_ } => Out::If {
-            cond: uniq_box(cond, &mut state.scope_in()),
-            then_: uniq_box(then_, &mut state.scope_in()),
-            else_: uniq_box(else_, &mut state.scope_in()),
+            cond: uniq_box(cond, state),
+            then_: uniq_box(then_, state),
+            else_: uniq_box(else_, state),
         },
         In::While { cond, body } => Out::While {
-            cond: uniq_box(cond, &mut state.scope_in()),
-            body: uniq_box(body, &mut state.scope_in()),
+            cond: uniq_box(cond, state),
+            body: uniq_box(body, state),
         },
         In::Let { var, expr } => {
-            let expr = uniq_box(expr, &mut state.scope_in());
+            let expr = uniq_box(expr, state);
             let var = state.fresh_name(var);
             Out::Let { var, expr }
         }
         In::Set { var, expr } => Out::Set {
             var: state.get_name(&var),
-            expr: uniq_box(expr, &mut state.scope_in()),
+            expr: uniq_box(expr, state),
         },
     }
 }

@@ -1,5 +1,8 @@
-// OUTPUT: 42
 {
-  (let a = 2) + (let b = 2) + 3;
-  print(a)
+    let i = 0;
+    let sum = 0;
+    while i > 5 {
+        sum = sum + 1
+    }
+    sum
 }

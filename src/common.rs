@@ -1,7 +1,7 @@
 pub type VarName = String;
 
 #[derive(Clone, Copy,  Debug, PartialEq, Eq, Hash)]
-pub enum BaseOp {
+pub enum BinOp {
     Add,
     Sub,
 }

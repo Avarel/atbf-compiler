@@ -1,3 +1,4 @@
 
 pub mod lang_parse;
-pub mod parsing;
+pub mod lexer;
+pub mod parser;

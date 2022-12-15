@@ -8,7 +8,7 @@ fn convert_op(op: lin::CoreOp) -> lout::CoreOp {
     type In = lin::CoreOp;
     type Out = lout::CoreOp;
     match op {
-        In::Base(b) => Out::Base(b),
+        In::Bin(b) => Out::Base(b),
         In::Cmp(c) => Out::Cmp(c),
         In::Or => Out::Or,
         In::And => Out::And,

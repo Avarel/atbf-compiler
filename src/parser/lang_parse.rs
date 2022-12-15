@@ -1,4 +1,4 @@
-use crate::common::{VarName, BaseOp, CmpOp, UnOp};
+use crate::common::{VarName, BinOp, CmpOp, UnOp};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Spanned<T> {
@@ -10,6 +10,12 @@ pub type Span = std::ops::Range<usize>;
 impl<T> Spanned<T> {
     pub fn new(expr: T, span: Span) -> Self {
         Self { inner: expr, span }
+    }
+}
+
+impl<T: std::fmt::Display> std::fmt::Display for Spanned<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
     }
 }
 
@@ -57,7 +63,7 @@ pub enum Exp {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CoreOp {
-    Base(BaseOp),
+    Bin(BinOp),
     Cmp(CmpOp),
     Or,
     And

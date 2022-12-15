@@ -1,8 +1,8 @@
-use crate::common::{VarName, CmpOp, BaseOp, UnOp};
+use crate::common::{VarName, CmpOp, BinOp, UnOp};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CoreOp {
-    Base(BaseOp),
+    Base(BinOp),
     Func(VarName),
     Cmp(CmpOp),
 }

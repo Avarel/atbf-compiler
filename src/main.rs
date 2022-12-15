@@ -1,8 +1,16 @@
-use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
-use chumsky::Parser;
-use parser::lang_parse::{self, Spanned};
+use std::process::exit;
 
-use crate::passes::{despan::despan, shrink::shrink, uniquify::uniquify, uncover_get::uncover_get, remove_complex::remove_complex};
+use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
+use logos::Logos;
+use parser::{
+    lang_parse::{self, Spanned},
+    lexer::Token,
+};
+
+use crate::passes::{
+    despan::despan, remove_complex::remove_complex, shrink::shrink, uncover_get::uncover_get,
+    uniquify::uniquify,
+};
 
 pub mod common;
 pub mod langs;
@@ -14,100 +22,80 @@ fn main() {
     let ast = despan(ast);
     let ast = shrink(ast);
     let ast = uniquify(ast);
-    let ast = uncover_get(ast);
-    let ast = remove_complex(ast);
+    // let ast = uncover_get(ast);
+    // let ast = remove_complex(ast);
     dbg!(ast);
 }
 
-fn parse() -> Option<Spanned<lang_parse::Exp>> {
-    let src = std::fs::read_to_string(std::env::args().nth(1).expect("Expected file argument"))
-        .expect("Failed to read file");
+fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<Spanned<&str>>> {
+    let mut lexer = Token::lexer(&src);
 
-    let (tokens, errs) = parser::parsing::lexer().parse_recovery(src.as_str());
+    let mut tokens = Vec::new();
+    let mut errors = Vec::new();
 
-    println!("{tokens:?}");
-    // panic!("done!");
+    while let Some(token) = lexer.next() {
+        if let Token::Error = token {
+            errors.push(Spanned::new(lexer.slice(), lexer.span()));
+        }
+        tokens.push(Spanned::new(token, lexer.span()));
+    }
 
-    let (ast, parse_errs) = if let Some(tokens) = tokens {
-        //dbg!(tokens);
-        let len = src.chars().count();
-        let (ast, parse_errs) = parser::parsing::expr_parser()
-            .parse_recovery(chumsky::Stream::from_iter(len..len + 1, tokens.into_iter()));
-
-        (ast, parse_errs)
+    if errors.is_empty() {
+        Ok(tokens)
     } else {
-        (None, Vec::new())
+        Err(errors)
+    }
+}
+
+fn parse() -> Option<Spanned<lang_parse::Exp>> {
+    let file_name = &std::env::args().nth(1).expect("Expected file argument");
+    let src = std::fs::read_to_string(file_name).expect("Failed to read file");
+
+    let tokens = match lex(&src) {
+        Ok(tokens) => tokens,
+        Err(errors) => {
+            for Spanned { inner: str, span } in errors.into_iter() {
+                Report::build(ReportKind::Error, file_name, 0)
+                    .with_message(format!("Unknown token \"{str}\""))
+                    .with_label(
+                        Label::new((file_name, span))
+                            .with_message("Unknown token")
+                            .with_color(Color::Red),
+                    )
+                    .finish()
+                    .print((file_name, Source::from(&src)))
+                    .unwrap();
+            }
+            exit(1)
+        }
     };
 
-    errs.into_iter()
-        .map(|e| e.map(|c| c.to_string()))
-        .chain(parse_errs.into_iter().map(|e| e.map(|tok| tok.to_string())))
-        .for_each(|e| {
-            let report = Report::build(ReportKind::Error, (), e.span().start);
-
-            let report = match e.reason() {
-                chumsky::error::SimpleReason::Unclosed { span, delimiter } => report
-                    .with_message(format!(
-                        "Unclosed delimiter {}",
-                        delimiter.fg(Color::Yellow)
-                    ))
+    let ast = match parser::parser::parser().parse(&tokens) {
+        Ok(ast) => ast,
+        Err(e) => match e {
+            pom::Error::Incomplete => todo!(),
+            pom::Error::Mismatch { message, position }
+            | pom::Error::Conversion { message, position }
+            | pom::Error::Expect {
+                message, position, ..
+            }
+            | pom::Error::Custom {
+                message, position, ..
+            } => {
+                Report::build(ReportKind::Error, file_name, 0)
+                    .with_message(&message)
                     .with_label(
-                        Label::new(span.clone())
-                            .with_message(format!(
-                                "Unclosed delimiter {}",
-                                delimiter.fg(Color::Yellow)
-                            ))
-                            .with_color(Color::Yellow),
+                        Label::new((file_name, tokens[position].span.clone()))
+                            .with_message(&message)
+                            .with_color(Color::Red),
                     )
-                    .with_label(
-                        Label::new(e.span())
-                            .with_message(format!(
-                                "Must be closed before this {}",
-                                e.found()
-                                    .unwrap_or(&"end of file".to_string())
-                                    .fg(Color::Red)
-                            ))
-                            .with_color(Color::Red),
-                    ),
-                chumsky::error::SimpleReason::Unexpected => report
-                    .with_message(format!(
-                        "{}, expected {}",
-                        if e.found().is_some() {
-                            "Unexpected token in input"
-                        } else {
-                            "Unexpected end of input"
-                        },
-                        if e.expected().len() == 0 {
-                            "something else".to_string()
-                        } else {
-                            e.expected()
-                                .map(|expected| match expected {
-                                    Some(expected) => expected.to_string(),
-                                    None => "end of input".to_string(),
-                                })
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        }
-                    ))
-                    .with_label(
-                        Label::new(e.span())
-                            .with_message(format!(
-                                "Unexpected token {}",
-                                e.found()
-                                    .unwrap_or(&"end of file".to_string())
-                                    .fg(Color::Red)
-                            ))
-                            .with_color(Color::Red),
-                    ),
-                chumsky::error::SimpleReason::Custom(msg) => report.with_message(msg).with_label(
-                    Label::new(e.span())
-                        .with_message(format!("{}", msg.fg(Color::Red)))
-                        .with_color(Color::Red),
-                ),
-            };
+                    .finish()
+                    .print((file_name, Source::from(&src)))
+                    .unwrap();
+                exit(1)
+            }
+        },
+    };
 
-            report.finish().print(Source::from(&src)).unwrap();
-        });
-
-    ast
+    Some(ast)
 }
