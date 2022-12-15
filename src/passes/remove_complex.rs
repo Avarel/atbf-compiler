@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::common::VarName;
 
 use crate::langs::l_get as lin;
@@ -124,7 +122,7 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
                 .into_iter()
                 .flat_map(|e| match rco_exp(e, state) {
                     Out::Block { body } => body,
-                    e =>  VecDeque::from([e]),
+                    e => vec![e],
                 })
                 .collect(),
         },
@@ -154,7 +152,6 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
             let bindings = bindings.into_iter().flatten().collect::<Vec<_>>();
             let mut body = convert_bindings(bindings);
             body.push(Out::Call { name, args: atoms });
-            let body = VecDeque::from(body);
             Out::Block { body }
         }
         In::BinOp { op, left, right } => {
@@ -167,14 +164,12 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
                 left: latm,
                 right: ratm,
             });
-            let body = VecDeque::from(body);
             Out::Block { body }
         }
         In::UnOp { op, arg } => {
             let (bind, atm) = rco_atom(*arg, state);
             let mut body = convert_bindings(bind);
             body.push(Out::UnOp { op, arg: atm });
-            let body = VecDeque::from(body);
             Out::Block { body }
         }
     }

@@ -97,16 +97,11 @@ fn explicate_assign(
             expr: convert_exp(expr),
         }),
         lin::Exp::Block { mut body } => {
-            let first = body.pop_front().unwrap();
-            if body.is_empty() {
-                explicate_assign(var, first, tail, state)
-            } else {
-                explicate_effect(
-                    first,
-                    explicate_assign(var, lin::Exp::Block { body }, tail, state),
-                    state,
-                )
+            let mut tail = explicate_assign(var, body.pop().unwrap(), tail, state);
+            for exp in body.into_iter().rev() {
+                tail = explicate_effect(exp, tail, state);
             }
+            tail
         }
         lin::Exp::If { cond, then_, else_ } => {
             let tail_goto = Block::tail(BlockEnd::Goto(state.create_block(tail)));
@@ -196,16 +191,11 @@ fn explicate_pred(
         }
 
         lin::Exp::Block { mut body } => {
-            let first = body.pop_front().unwrap();
-            if body.is_empty() {
-                explicate_pred(first, then_tail, else_tail, state)
-            } else {
-                explicate_effect(
-                    first,
-                    explicate_pred(lin::Exp::Block { body }, then_tail, else_tail, state),
-                    state,
-                )
+            let mut tail = explicate_pred(body.pop().unwrap(), then_tail, else_tail, state);
+            for exp in body.into_iter().rev() {
+                tail = explicate_effect(exp, tail, state);
             }
+            tail
         }
 
         lin::Exp::BinOp {
@@ -313,7 +303,7 @@ fn explicate_tail(e: lin::Exp, state: &mut ExplicateState) -> Block {
         | lin::Exp::BinOp { .. }
         | lin::Exp::UnOp { .. } => Block::tail(BlockEnd::Return(convert_exp(e))),
         lin::Exp::Block { mut body } => {
-            let mut tail = explicate_tail(body.pop_back().unwrap(), state);
+            let mut tail = explicate_tail(body.pop().unwrap(), state);
             for exp in body.into_iter().rev() {
                 tail = explicate_effect(exp, tail, state);
             }

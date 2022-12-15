@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::common::{UnOp, VarName};
 
 pub use super::l_shrink::CoreOp;
@@ -16,7 +14,7 @@ pub enum Atm {
 pub enum Exp {
     Atm(Atm),
     Block {
-        body: VecDeque<Exp>,
+        body: Vec<Exp>,
     },
     If {
         cond: Box<Exp>,
