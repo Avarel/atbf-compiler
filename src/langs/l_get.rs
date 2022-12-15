@@ -1,11 +1,6 @@
-use crate::common::{VarName, CmpOp, BinOp, UnOp};
+use crate::common::{UnOp, VarName};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum CoreOp {
-    Base(BinOp),
-    Func(VarName),
-    Cmp(CmpOp),
-}
+pub use super::l_shrink::CoreOp;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Exp {
@@ -33,6 +28,9 @@ pub enum Exp {
         var: VarName,
         expr: Box<Exp>,
     },
+    Get {
+        var: VarName,
+    },
     Call {
         name: VarName,
         args: Vec<Exp>,
@@ -40,7 +38,7 @@ pub enum Exp {
     BinOp {
         op: CoreOp,
         left: Box<Exp>,
-        right: Box<Exp>
+        right: Box<Exp>,
     },
     UnOp {
         op: UnOp,

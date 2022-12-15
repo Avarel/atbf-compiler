@@ -1,7 +1,7 @@
 use crate::common::map_box;
 use crate::parser::lang_parse::Spanned;
 
-use crate::langs::lang as lout;
+use crate::langs::l_ast as lout;
 use crate::parser::lang_parse as lin;
 
 fn convert_op(op: lin::CoreOp) -> lout::CoreOp {

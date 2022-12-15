@@ -1,12 +1,13 @@
+use std::collections::VecDeque;
+
 use crate::common::VarName;
 
-use crate::langs::lang_get as lin;
-use crate::langs::lang_mon as lout;
+use crate::langs::l_get as lin;
+use crate::langs::l_mon as lout;
 use lout::Atm;
 type In = lin::Exp;
 type Out = lout::Exp;
 
-#[derive(Clone)]
 struct TmpState {
     counter: u32,
 }
@@ -123,7 +124,7 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
                 .into_iter()
                 .flat_map(|e| match rco_exp(e, state) {
                     Out::Block { body } => body,
-                    e => vec![e],
+                    e =>  VecDeque::from([e]),
                 })
                 .collect(),
         },
@@ -153,6 +154,7 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
             let bindings = bindings.into_iter().flatten().collect::<Vec<_>>();
             let mut body = convert_bindings(bindings);
             body.push(Out::Call { name, args: atoms });
+            let body = VecDeque::from(body);
             Out::Block { body }
         }
         In::BinOp { op, left, right } => {
@@ -165,12 +167,14 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
                 left: latm,
                 right: ratm,
             });
+            let body = VecDeque::from(body);
             Out::Block { body }
         }
         In::UnOp { op, arg } => {
             let (bind, atm) = rco_atom(*arg, state);
             let mut body = convert_bindings(bind);
             body.push(Out::UnOp { op, arg: atm });
+            let body = VecDeque::from(body);
             Out::Block { body }
         }
     }

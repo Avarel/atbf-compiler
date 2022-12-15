@@ -1,22 +1,22 @@
-use crate::common::{VarName, CmpOp, BinOp, UnOp};
+use std::collections::VecDeque;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum CoreOp {
-    Base(BinOp),
-    Func(VarName),
-    Cmp(CmpOp),
-    Or,
-    And
-}
+use crate::common::{UnOp, VarName};
+
+pub use super::l_shrink::CoreOp;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Exp {
+pub enum Atm {
     Void,
     Bool(bool),
     Int(i64),
     Var(VarName),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Exp {
+    Atm(Atm),
     Block {
-        body: Vec<Exp>,
+        body: VecDeque<Exp>,
     },
     If {
         cond: Box<Exp>,
@@ -37,15 +37,15 @@ pub enum Exp {
     },
     Call {
         name: VarName,
-        args: Vec<Exp>,
+        args: Vec<Atm>,
     },
     BinOp {
         op: CoreOp,
-        left: Box<Exp>,
-        right: Box<Exp>
+        left: Atm,
+        right: Atm,
     },
     UnOp {
         op: UnOp,
-        arg: Box<Exp>,
+        arg: Atm,
     },
 }

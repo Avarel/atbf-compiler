@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::langs::lang_shrink as lang;
+use crate::langs::l_shrink as lang;
 
 struct UniquifyState<'a> {
     parent: Option<&'a Self>,
@@ -92,8 +92,8 @@ fn uniq(exp: lang::Exp, state: &mut UniquifyState) -> lang::Exp {
             body: uniq_box(body, state),
         },
         In::Let { var, expr } => {
-            let expr = uniq_box(expr, state);
             let var = state.fresh_name(var);
+            let expr = uniq_box(expr, state);
             Out::Let { var, expr }
         }
         In::Set { var, expr } => Out::Set {

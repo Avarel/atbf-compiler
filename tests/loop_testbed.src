@@ -1,8 +1,10 @@
 {
-    let i = 0;
-    let sum = 0;
-    while i > 5 {
-        sum = sum + 1
-    }
-    sum
+    let z = if { let x = read(); let z = 2; print(z); x == 1 } {
+        print(1);
+        1
+    } else {
+        print(2);
+        2
+    };
+    print(z)
 }

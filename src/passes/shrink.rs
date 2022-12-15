@@ -1,14 +1,13 @@
 use crate::common::map_box;
 
-use crate::langs::lang as lin;
-use crate::langs::lang_shrink as lout;
+use crate::langs::l_ast as lin;
+use crate::langs::l_shrink as lout;
 
 fn convert_op(op: lin::CoreOp) -> lout::CoreOp {
     type In = lin::CoreOp;
     type Out = lout::CoreOp;
     match op {
         In::Base(b) => Out::Base(b),
-        In::Func(f) => Out::Func(f),
         In::Cmp(c) => Out::Cmp(c),
         In::Or => unreachable!(),
         In::And => unreachable!(),

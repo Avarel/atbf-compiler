@@ -71,7 +71,7 @@ pub fn ident<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<&'a str>> {
                 Ok((Spanned::new(*i, st.span.clone()), start + 1))
             } else {
                 Err(Error::Mismatch {
-                    message: format!("expected number, found: {}", s),
+                    message: format!("expected identifier, found: {}", s),
                     position: start,
                 })
             }
@@ -89,57 +89,6 @@ fn atom<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
         | (sym(Token::LParen) * call(expr) - sym(Token::RParen))
         | call(block)
 }
-
-// /// Parse separated list.
-// pub fn list<'a, I, O, U>(
-//     parser: Parser<'a, I, O>,
-//     separator: Parser<'a, I, U>,
-// ) -> Parser<'a, I, Vec<O>>
-// where
-//     O: 'a,
-//     U: 'a,
-// {
-//     Parser::new(move |input: &'a [I], start: usize| {
-//         let mut items = vec![];
-//         let mut pos = start;
-//         if let Ok((first_item, first_pos)) = (parser.method)(input, pos) {
-//             items.push(first_item);
-//             pos = first_pos;
-//             while let Ok((_, sep_pos)) = (separator.method)(input, pos) {
-//                 match (parser.method)(input, sep_pos) {
-//                     Ok((more_item, more_pos)) => {
-//                         items.push(more_item);
-//                         pos = more_pos;
-//                     }
-//                     Err(e) => {
-//                         return Err(match e {
-//                             Error::Incomplete => Error::Incomplete,
-//                             Error::Mismatch { message, position } => Error::Mismatch {
-//                                 message,
-//                                 position: position,
-//                             },
-//                             Error::Conversion { message, position } => Error::Conversion {
-//                                 message,
-//                                 position: position,
-//                             },
-//                             Error::Expect { message, inner, position } => Error::Expect {
-//                                 message,
-//                                 position: position,
-//                                 inner,
-//                             },
-//                             Error::Custom { message, inner, position } => Error::Custom {
-//                                 message,
-//                                 position: position,
-//                                 inner,
-//                             },
-//                         })
-//                     }
-//                 }
-//             }
-//         }
-//         Ok((items, pos))
-//     })
-// }
 
 fn func_call<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
     let expr_list = list(call(expr), sym(Token::Comma));
@@ -170,7 +119,7 @@ fn factor<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
             t.span,
         )
     });
-    (ops + primary()).map(|(op, arg)| {
+    (ops + call(factor)).map(|(op, arg)| {
         let span = op.span.start..arg.span.end;
         Spanned::new(
             Exp::UnOp {
@@ -333,31 +282,41 @@ fn while_expr<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
 fn sequence<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
     let semi_expr = let_expr() | set_expr() | expr();
     let free_stmt = if_expr() | while_expr() | call(block);
+    let semi = sym(Token::Semi);
 
-    let parse = (free_stmt - sym(Token::Semi).opt() + call(sequence).opt())
-        | (semi_expr + (sym(Token::Semi) * call(sequence)).opt());
-    parse.map(|(base, tail)| match tail {
-        None => {
-            let span = base.span.clone();
-            Spanned::new(Exp::Block { body: vec![base] }, span)
+    let parse = Parser::new(move |input: &'a [Spanned<Token<'a>>], start: usize| {
+        let mut items = Vec::new();
+        let mut semi_next = false;
+        let mut pos = start;
+
+        loop {
+            match (semi.method)(input, pos) {
+                Ok((_, sep_pos)) => pos = sep_pos,
+                Err(_) if semi_next => break,
+                Err(_) => (),
+            }
+            if let Ok((item, first_pos)) = (free_stmt.method)(input, pos) {
+                items.push(item);
+                pos = first_pos;
+                semi_next = false;
+            } else if let Ok((item, first_pos)) = (semi_expr.method)(input, pos) {
+                items.push(item);
+                pos = first_pos;
+                semi_next = true;
+            } else {
+                if semi_next {
+                    items.push(Spanned::new(Exp::Void, pos..pos + 1));
+                }
+                break;
+            }
         }
-        Some(Spanned {
-            inner: Exp::Block { mut body },
-            ..
-        }) => {
-            let span = base.span.start..body.last().unwrap().span.end;
-            body.insert(0, base);
-            Spanned::new(Exp::Block { body }, span)
-        }
-        Some(tail) => {
-            let span = base.span.start..tail.span.end;
-            Spanned::new(
-                Exp::Block {
-                    body: vec![base, tail],
-                },
-                span,
-            )
-        }
+
+        Ok((items, pos))
+    });
+
+    parse.map(|body| {
+        let span = body.first().unwrap().span.start..body.last().unwrap().span.end;
+        Spanned::new(Exp::Block { body }, span)
     })
 }
 

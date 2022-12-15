@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use crate::common::VarName;
 
-use crate::langs::lang_get as lout;
-use crate::langs::lang_shrink as lin;
+use crate::langs::l_get as lout;
+use crate::langs::l_shrink as lin;
 type In = lin::Exp;
 type Out = lout::Exp;
 

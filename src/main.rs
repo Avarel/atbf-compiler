@@ -1,15 +1,10 @@
 use std::process::exit;
 
-use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
+use ariadne::{Color, Label, Report, ReportKind, Source};
 use logos::Logos;
 use parser::{
     lang_parse::{self, Spanned},
     lexer::Token,
-};
-
-use crate::passes::{
-    despan::despan, remove_complex::remove_complex, shrink::shrink, uncover_get::uncover_get,
-    uniquify::uniquify,
 };
 
 pub mod common;
@@ -19,11 +14,13 @@ pub mod passes;
 
 fn main() {
     let ast = parse().expect("Parse failure");
-    let ast = despan(ast);
-    let ast = shrink(ast);
-    let ast = uniquify(ast);
-    // let ast = uncover_get(ast);
-    // let ast = remove_complex(ast);
+    let ast = passes::despan(ast);
+    let ast = passes::shrink(ast);
+    let ast = passes::uniquify(ast);
+    let ast = passes::flatten(ast);
+    let ast = passes::uncover_get(ast);
+    let ast = passes::remove_complex(ast);
+    let ast = passes::explicate_control(ast);
     dbg!(ast);
 }
 
