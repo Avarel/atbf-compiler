@@ -30,8 +30,8 @@ pub enum Exp {
     },
     If {
         cond: Box<SpannedExp>,
-        then_: Box<SpannedExp>,
-        else_: Box<SpannedExp>,
+        then_branch: Box<SpannedExp>,
+        else_branch: Box<SpannedExp>,
     },
     While {
         cond: Box<SpannedExp>,

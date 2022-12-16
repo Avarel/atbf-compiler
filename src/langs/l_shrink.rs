@@ -11,8 +11,8 @@ pub enum Exp {
     },
     If {
         cond: Box<Self>,
-        yes: Box<Self>,
-        no: Box<Self>,
+        then_branch: Box<Self>,
+        else_branch: Box<Self>,
     },
     While {
         cond: Box<Self>,

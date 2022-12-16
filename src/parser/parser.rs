@@ -258,10 +258,10 @@ fn if_expr<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
             Spanned::new(
                 Exp::If {
                     cond: Box::new(cond),
-                    else_: else_.map(Box::new).unwrap_or_else(|| {
+                    else_branch: else_.map(Box::new).unwrap_or_else(|| {
                         Box::new(Spanned::new(Exp::Void, then_.span.end..then_.span.end + 1))
                     }),
-                    then_: Box::new(then_),
+                    then_branch: Box::new(then_),
                 },
                 span,
             )

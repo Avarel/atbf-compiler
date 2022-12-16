@@ -18,10 +18,14 @@ pub fn despan(exp: Spanned<lin::Exp>) -> lout::Exp {
         In::Block { body } => Out::Block {
             body: body.into_iter().map(despan).collect(),
         },
-        In::If { cond, then_, else_ } => Out::If {
+        In::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => Out::If {
             cond: despan_box(cond),
-            then_: despan_box(then_),
-            else_: despan_box(else_),
+            then_branch: despan_box(then_branch),
+            else_branch: despan_box(else_branch),
         },
         In::While { cond, body } => Out::While {
             cond: despan_box(cond),
@@ -33,7 +37,7 @@ pub fn despan(exp: Spanned<lin::Exp>) -> lout::Exp {
         },
         In::Set { var, expr } => Out::Set {
             var,
-            expr: despan_box(expr)
+            expr: despan_box(expr),
         },
         In::Call { name, args } => Out::Call {
             name,

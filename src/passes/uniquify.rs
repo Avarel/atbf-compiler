@@ -82,10 +82,14 @@ fn uniq(exp: lang::Exp, state: &mut UniquifyState) -> lang::Exp {
                 body: body.into_iter().map(|e| uniq(e, state)).collect(),
             }
         }
-        In::If { cond, yes: then_, no: else_ } => Out::If {
+        In::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => Out::If {
             cond: uniq_box(cond, state),
-            yes: uniq_box(then_, state),
-            no: uniq_box(else_, state),
+            then_branch: uniq_box(then_branch, state),
+            else_branch: uniq_box(else_branch, state),
         },
         In::While { cond, body } => Out::While {
             cond: uniq_box(cond, state),

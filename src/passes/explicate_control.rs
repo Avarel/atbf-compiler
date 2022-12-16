@@ -81,12 +81,16 @@ fn explicate_assign(
             let tail = explicate_assign(var, body.pop().unwrap(), tail, state);
             explicate_effect(lin::Exp::Block { body }, tail, state)
         }
-        lin::Exp::If { cond, yes: then_, no: else_ } => {
+        lin::Exp::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => {
             let tail_goto = Block::tail(BlockEnd::Goto(state.create_block(tail)));
             explicate_pred(
                 *cond,
-                explicate_assign(var.clone(), *then_, tail_goto.clone(), state),
-                explicate_assign(var, *else_, tail_goto, state),
+                explicate_assign(var.clone(), *then_branch, tail_goto.clone(), state),
+                explicate_assign(var, *else_branch, tail_goto, state),
                 state,
             )
         }
@@ -117,15 +121,19 @@ fn explicate_pred(
                 else_label,
             })
         }
-        lin::Exp::If { cond, yes: then_, no: else_ } => {
+        lin::Exp::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => {
             let then_label = state.create_block(then_tail);
             let else_label = state.create_block(else_tail);
             let goto_then = Block::tail(BlockEnd::Goto(then_label));
             let goto_else = Block::tail(BlockEnd::Goto(else_label));
             explicate_pred(
                 *cond,
-                explicate_pred(*then_, goto_then.clone(), goto_else.clone(), state),
-                explicate_pred(*else_, goto_then, goto_else, state),
+                explicate_pred(*then_branch, goto_then.clone(), goto_else.clone(), state),
+                explicate_pred(*else_branch, goto_then, goto_else, state),
                 state,
             )
         }
@@ -169,20 +177,20 @@ fn explicate_effect(expr: lin::Exp, tail: Block, state: &mut ExplicateState) -> 
     match expr {
         lin::Exp::Atm(_) | lin::Exp::BinOp { .. } | lin::Exp::UnOp { .. } => tail,
         lin::Exp::Call { name, args } => tail.push(Stmt::Call { name, args }),
-        lin::Exp::Block { body } => {
-            let mut tail = tail;
-            for exp in body.into_iter().rev() {
-                tail = explicate_effect(exp, tail, state);
-            }
-            tail
-        }
-        lin::Exp::If { cond, yes: then_, no: else_ } => {
+        lin::Exp::Block { body } => body
+            .into_iter()
+            .rfold(tail, |tail, expr| explicate_effect(expr, tail, state)),
+        lin::Exp::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => {
             let tail = state.create_block(tail);
             let tail_goto = Block::tail(BlockEnd::Goto(tail));
             explicate_pred(
                 *cond,
-                explicate_effect(*then_, tail_goto.clone(), state),
-                explicate_effect(*else_, tail_goto, state),
+                explicate_effect(*then_branch, tail_goto.clone(), state),
+                explicate_effect(*else_branch, tail_goto, state),
                 state,
             )
         }
@@ -210,10 +218,14 @@ fn explicate_tail(e: lin::Exp, state: &mut ExplicateState) -> Block {
             let tail = explicate_tail(body.pop().unwrap(), state);
             explicate_effect(lin::Exp::Block { body }, tail, state)
         }
-        lin::Exp::If { cond, yes: then_, no: else_ } => explicate_pred(
+        lin::Exp::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => explicate_pred(
             *cond,
-            explicate_tail(*then_, state),
-            explicate_tail(*else_, state),
+            explicate_tail(*then_branch, state),
+            explicate_tail(*else_branch, state),
             state,
         ),
         lin::Exp::Set { .. } | lin::Exp::While { .. } => {

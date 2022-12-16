@@ -21,7 +21,12 @@ fn main() {
     let ast = passes::uncover_get(ast);
     let ast = passes::remove_complex(ast);
     let ast = passes::explicate_control(ast);
-    dbg!(ast);
+    // dbg!(ast);
+
+    for (lbl, block) in ast {
+        println!("{lbl}:");
+        println!("{block}\n");
+    }
 }
 
 fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<Spanned<&str>>> {

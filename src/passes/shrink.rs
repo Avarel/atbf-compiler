@@ -31,8 +31,8 @@ pub fn shrink(exp: lin::Exp) -> lout::Exp {
             right,
         } => Out::If {
             cond: shrink_box(left),
-            yes: shrink_box(right),
-            no: Box::new(Out::Bool(false)),
+            then_branch: shrink_box(right),
+            else_branch: Box::new(Out::Bool(false)),
         },
         In::BinOp {
             op: BinOp::Logic(LogicOp::Or),
@@ -40,8 +40,8 @@ pub fn shrink(exp: lin::Exp) -> lout::Exp {
             right,
         } => Out::If {
             cond: shrink_box(left),
-            yes: Box::new(Out::Bool(true)),
-            no: shrink_box(right),
+            then_branch: Box::new(Out::Bool(true)),
+            else_branch: shrink_box(right),
         },
         In::Call { name, args } => Out::Call {
             name,
@@ -59,10 +59,14 @@ pub fn shrink(exp: lin::Exp) -> lout::Exp {
         In::Block { body } => Out::Block {
             body: body.into_iter().map(shrink).collect(),
         },
-        In::If { cond, then_, else_ } => Out::If {
+        In::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => Out::If {
             cond: shrink_box(cond),
-            yes: shrink_box(then_),
-            no: shrink_box(else_),
+            then_branch: shrink_box(then_branch),
+            else_branch: shrink_box(else_branch),
         },
         In::While { cond, body } => Out::While {
             cond: shrink_box(cond),

@@ -34,20 +34,31 @@ fn rco_atom(e: In, state: &mut TmpState) -> (Vec<Binding>, Atm) {
         In::Int(i) => (vec![], Atm::Int(i)),
         In::Var(v) => (vec![], Atm::Var(v)),
         In::Block { body } => {
-            let body_ = body.into_iter().map(|e| rco_exp(e, state)).collect();
+            let body = body.into_iter().map(|e| rco_exp(e, state)).collect();
             let tmp = state.get_name();
             (
-                vec![Binding(tmp.clone(), Out::Block { body: body_ })],
+                vec![Binding(tmp.clone(), Out::Block { body: body })],
                 Atm::Var(tmp),
             )
         }
-        In::If { cond, yes, no } => {
+        In::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => {
             let cond = rco_atom_box(cond, state);
-            let yes = rco_atom_box(yes, state);
-            let no = rco_atom_box(no, state);
+            let then_branch = rco_atom_box(then_branch, state);
+            let else_branch = rco_atom_box(else_branch, state);
             let tmp = state.get_name();
             (
-                vec![Binding(tmp.clone(), Out::If { cond, yes, no })],
+                vec![Binding(
+                    tmp.clone(),
+                    Out::If {
+                        cond,
+                        then_branch,
+                        else_branch,
+                    },
+                )],
                 Atm::Var(tmp),
             )
         }
@@ -132,16 +143,16 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
         },
         In::If {
             cond,
-            yes: then_,
-            no: else_,
+            then_branch,
+            else_branch,
         } => {
             let cond = rco_atom_box(cond, state);
-            let then_ = rco_atom_box(then_, state);
-            let else_ = rco_atom_box(else_, state);
+            let then_branch = rco_atom_box(then_branch, state);
+            let else_branch = rco_atom_box(else_branch, state);
             Out::If {
                 cond,
-                yes: then_,
-                no: else_,
+                then_branch,
+                else_branch,
             }
         }
         In::While { cond, body } => {

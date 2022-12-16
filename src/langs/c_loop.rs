@@ -1,7 +1,4 @@
-use std::{
-    collections::VecDeque,
-    fmt::{Pointer, Write},
-};
+use std::collections::VecDeque;
 
 use crate::common::{CmpOp, CoreOp, UnOp, VarName};
 
@@ -13,7 +10,7 @@ impl std::fmt::Display for Atm {
             Atm::Void => f.write_str("void"),
             Atm::Bool(b) => b.fmt(f),
             Atm::Int(i) => i.fmt(f),
-            Atm::Var(v) => write!(f, "var({})", v),
+            Atm::Var(v) => f.write_str(v),
         }
     }
 }
@@ -32,17 +29,17 @@ impl std::fmt::Display for Exp {
             Exp::Atm(a) => a.fmt(f),
             Exp::Call { name, args } => {
                 name.fmt(f)?;
-                f.write_char('(')?;
+                f.write_str("(")?;
                 if !args.is_empty() {
                     args[0].fmt(f)?;
                     for arg in &args[1..] {
                         arg.fmt(f)?;
                     }
                 }
-                f.write_char(')')
+                f.write_str(")")
             }
-            Exp::BinOp { op, left, right } => todo!(),
-            Exp::UnOp { op, arg } => todo!(),
+            Exp::BinOp { op, left, right } => write!(f, "{left} {op} {right}"),
+            Exp::UnOp { op, arg } => write!(f, "{op}{arg}"),
         }
     }
 }
@@ -51,6 +48,25 @@ impl std::fmt::Display for Exp {
 pub enum Stmt {
     Assign { var: VarName, expr: Exp },
     Call { name: VarName, args: Vec<Atm> },
+}
+
+impl std::fmt::Display for Stmt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Stmt::Assign { var, expr } => write!(f, "{var} := {expr}"),
+            Stmt::Call { name, args } => {
+                name.fmt(f)?;
+                f.write_str("(")?;
+                if !args.is_empty() {
+                    args[0].fmt(f)?;
+                    for arg in &args[1..] {
+                        arg.fmt(f)?;
+                    }
+                }
+                f.write_str(")")
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -66,10 +82,41 @@ pub enum BlockEnd {
     },
 }
 
+impl std::fmt::Display for BlockEnd {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BlockEnd::Return(e) => write!(f, "return {e}"),
+            BlockEnd::Goto(l) => write!(f, "goto {l}"),
+            BlockEnd::IfStmt {
+                cmp_op,
+                left,
+                right,
+                then_label,
+                else_label,
+            } => write!(
+                f,
+                "if {left} {cmp_op} {right} goto {then_label} else {else_label}"
+            ),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Block {
     pub body: VecDeque<Stmt>,
     pub end: BlockEnd,
+}
+
+impl std::fmt::Display for Block {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for stmt in &self.body {
+            f.write_str("    ")?;
+            stmt.fmt(f)?;
+            f.write_str("\n")?;
+        }
+        f.write_str("    ")?;
+        self.end.fmt(f)
+    }
 }
 
 impl Block {
