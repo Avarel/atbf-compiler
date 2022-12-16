@@ -1,6 +1,4 @@
-use crate::common::{UnOp, VarName};
-
-pub use super::l_shrink::CoreOp;
+use crate::common::{UnOp, VarName, CoreOp};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Exp {
@@ -9,39 +7,39 @@ pub enum Exp {
     Int(i64),
     Var(VarName),
     Block {
-        body: Vec<Exp>,
+        body: Vec<Self>,
     },
     If {
-        cond: Box<Exp>,
-        then_: Box<Exp>,
-        else_: Box<Exp>,
+        cond: Box<Self>,
+        yes: Box<Self>,
+        no: Box<Self>,
     },
     While {
-        cond: Box<Exp>,
-        body: Box<Exp>,
+        cond: Box<Self>,
+        body: Box<Self>,
     },
     Let {
         var: VarName,
-        expr: Box<Exp>,
+        expr: Box<Self>,
     },
     Set {
         var: VarName,
-        expr: Box<Exp>,
+        expr: Box<Self>,
     },
     Get {
         var: VarName,
     },
     Call {
         name: VarName,
-        args: Vec<Exp>,
+        args: Vec<Self>,
     },
     BinOp {
         op: CoreOp,
-        left: Box<Exp>,
-        right: Box<Exp>,
+        left: Box<Self>,
+        right: Box<Self>,
     },
     UnOp {
         op: UnOp,
-        arg: Box<Exp>,
+        arg: Box<Self>,
     },
 }

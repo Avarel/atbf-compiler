@@ -1,9 +1,19 @@
 pub type VarName = String;
 
 #[derive(Clone, Copy,  Debug, PartialEq, Eq, Hash)]
-pub enum BinOp {
+pub enum ArithOp {
     Add,
     Sub,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CmpOp {
+    Eq,
+    Neq,
+    Lt,
+    Le,
+    Gt,
+    Ge,
 }
 
 #[derive(Clone, Copy,  Debug, PartialEq, Eq, Hash)]
@@ -12,16 +22,22 @@ pub enum UnOp {
     Negate,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum CmpOp {
-    Neq,
-    Eq,
-    Lt,
-    Le,
-    Gt,
-    Ge,
+#[derive(Clone, Copy,  Debug, PartialEq, Eq, Hash)]
+pub enum CoreOp {
+    Arith(ArithOp),
+    Cmp(CmpOp),
 }
 
-pub fn map_box<T, R>(b: Box<T>, f: impl FnOnce(T) -> R) -> Box<R> {
-    Box::new(f(*b))
+#[derive(Clone, Copy,  Debug, PartialEq, Eq, Hash)]
+pub enum LogicOp {
+    And,
+    Or
 }
+
+#[derive(Clone, Copy,  Debug, PartialEq, Eq, Hash)]
+pub enum BinOp {
+    Arith(ArithOp),
+    Cmp(CmpOp),
+    Logic(LogicOp)
+}
+

@@ -1,21 +1,20 @@
-use crate::common::map_box;
+use crate::common::BinOp;
+use crate::common::CoreOp;
+use crate::common::LogicOp;
 
 use crate::langs::l_ast as lin;
 use crate::langs::l_shrink as lout;
 
-fn convert_op(op: lin::CoreOp) -> lout::CoreOp {
-    type In = lin::CoreOp;
-    type Out = lout::CoreOp;
+fn convert_op(op: BinOp) -> CoreOp {
     match op {
-        In::Base(b) => Out::Base(b),
-        In::Cmp(c) => Out::Cmp(c),
-        In::Or => unreachable!(),
-        In::And => unreachable!(),
+        BinOp::Arith(b) => CoreOp::Arith(b),
+        BinOp::Cmp(c) => CoreOp::Cmp(c),
+        BinOp::Logic(_) => unreachable!(),
     }
 }
 
 fn shrink_box(b: Box<lin::Exp>) -> Box<lout::Exp> {
-    map_box(b, shrink)
+    Box::new(shrink(*b))
 }
 
 pub fn shrink(exp: lin::Exp) -> lout::Exp {
@@ -27,22 +26,22 @@ pub fn shrink(exp: lin::Exp) -> lout::Exp {
         In::Int(i) => Out::Int(i),
         In::Var(v) => Out::Var(v),
         In::BinOp {
-            op: lin::CoreOp::And,
+            op: BinOp::Logic(LogicOp::And),
             left,
             right,
         } => Out::If {
             cond: shrink_box(left),
-            then_: shrink_box(right),
-            else_: Box::new(Out::Bool(false)),
+            yes: shrink_box(right),
+            no: Box::new(Out::Bool(false)),
         },
         In::BinOp {
-            op: lin::CoreOp::Or,
+            op: BinOp::Logic(LogicOp::Or),
             left,
             right,
         } => Out::If {
             cond: shrink_box(left),
-            then_: Box::new(Out::Bool(true)),
-            else_: shrink_box(right),
+            yes: Box::new(Out::Bool(true)),
+            no: shrink_box(right),
         },
         In::Call { name, args } => Out::Call {
             name,
@@ -62,8 +61,8 @@ pub fn shrink(exp: lin::Exp) -> lout::Exp {
         },
         In::If { cond, then_, else_ } => Out::If {
             cond: shrink_box(cond),
-            then_: shrink_box(then_),
-            else_: shrink_box(else_),
+            yes: shrink_box(then_),
+            no: shrink_box(else_),
         },
         In::While { cond, body } => Out::While {
             cond: shrink_box(cond),

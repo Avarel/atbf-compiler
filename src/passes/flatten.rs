@@ -1,7 +1,7 @@
-use crate::{common::map_box, langs::l_shrink as lang};
+use crate::{langs::l_shrink as lang};
 
 fn flatten_box(b: Box<lang::Exp>) -> Box<lang::Exp> {
-    map_box(b, flatten)
+    Box::new(flatten(*b))
 }
 
 pub fn flatten(exp: lang::Exp) -> lang::Exp {
@@ -40,10 +40,10 @@ pub fn flatten(exp: lang::Exp) -> lang::Exp {
                 Out::Block { body: new_body }
             }
         }
-        In::If { cond, then_, else_ } => Out::If {
+        In::If { cond, yes: then_, no: else_ } => Out::If {
             cond: flatten_box(cond),
-            then_: flatten_box(then_),
-            else_: flatten_box(else_),
+            yes: flatten_box(then_),
+            no: flatten_box(else_),
         },
         In::While { cond, body } => Out::While {
             cond: flatten_box(cond),

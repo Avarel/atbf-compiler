@@ -23,6 +23,10 @@ impl TmpState {
 
 struct Binding(VarName, lout::Exp);
 
+fn rco_atom_box(e: Box<In>, state: &mut TmpState) -> Box<Out> {
+    Box::new(rco_exp(*e, state))
+}
+
 fn rco_atom(e: In, state: &mut TmpState) -> (Vec<Binding>, Atm) {
     match e {
         In::Void => (vec![], Atm::Void),
@@ -37,19 +41,19 @@ fn rco_atom(e: In, state: &mut TmpState) -> (Vec<Binding>, Atm) {
                 Atm::Var(tmp),
             )
         }
-        In::If { cond, then_, else_ } => {
-            let cond = Box::new(rco_exp(*cond, state));
-            let then_ = Box::new(rco_exp(*then_, state));
-            let else_ = Box::new(rco_exp(*else_, state));
+        In::If { cond, yes, no } => {
+            let cond = rco_atom_box(cond, state);
+            let yes = rco_atom_box(yes, state);
+            let no = rco_atom_box(no, state);
             let tmp = state.get_name();
             (
-                vec![Binding(tmp.clone(), Out::If { cond, then_, else_ })],
+                vec![Binding(tmp.clone(), Out::If { cond, yes, no })],
                 Atm::Var(tmp),
             )
         }
         In::While { cond, body } => {
-            let cond = Box::new(rco_exp(*cond, state));
-            let body = Box::new(rco_exp(*body, state));
+            let cond = rco_atom_box(cond, state);
+            let body = rco_atom_box(body, state);
             let tmp = state.get_name();
             (
                 vec![Binding(tmp.clone(), Out::While { cond, body })],
@@ -58,7 +62,7 @@ fn rco_atom(e: In, state: &mut TmpState) -> (Vec<Binding>, Atm) {
         }
         In::Let { var, expr } => (vec![Binding(var, rco_exp(*expr, state))], Atm::Void),
         In::Set { var, expr } => {
-            let expr = Box::new(rco_exp(*expr, state));
+            let expr = rco_atom_box(expr, state);
             let tmp = state.get_name();
             (vec![Binding(tmp, Out::Set { var, expr })], Atm::Void)
         }
@@ -126,23 +130,31 @@ fn rco_exp(e: In, state: &mut TmpState) -> Out {
                 })
                 .collect(),
         },
-        In::If { cond, then_, else_ } => {
-            let cond = Box::new(rco_exp(*cond, state));
-            let then_ = Box::new(rco_exp(*then_, state));
-            let else_ = Box::new(rco_exp(*else_, state));
-            Out::If { cond, then_, else_ }
+        In::If {
+            cond,
+            yes: then_,
+            no: else_,
+        } => {
+            let cond = rco_atom_box(cond, state);
+            let then_ = rco_atom_box(then_, state);
+            let else_ = rco_atom_box(else_, state);
+            Out::If {
+                cond,
+                yes: then_,
+                no: else_,
+            }
         }
         In::While { cond, body } => {
-            let cond = Box::new(rco_exp(*cond, state));
-            let body = Box::new(rco_exp(*body, state));
+            let cond = rco_atom_box(cond, state);
+            let body = rco_atom_box(body, state);
             Out::While { cond, body }
         }
         In::Let { var, expr } => Out::Let {
             var,
-            expr: Box::new(rco_exp(*expr, state)),
+            expr: rco_atom_box(expr, state),
         },
         In::Set { var, expr } => {
-            let expr = Box::new(rco_exp(*expr, state));
+            let expr = rco_atom_box(expr, state);
             Out::Set { var, expr }
         }
         In::Get { var } => Out::Atm(Atm::Var(var)),

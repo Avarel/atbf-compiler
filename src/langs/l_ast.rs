@@ -1,12 +1,4 @@
-use crate::common::{VarName, CmpOp, BinOp, UnOp};
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum CoreOp {
-    Base(BinOp),
-    Cmp(CmpOp),
-    Or,
-    And
-}
+use crate::common::{VarName, UnOp, BinOp};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Exp {
@@ -15,36 +7,36 @@ pub enum Exp {
     Int(i64),
     Var(VarName),
     Block {
-        body: Vec<Exp>,
+        body: Vec<Self>,
     },
     If {
-        cond: Box<Exp>,
-        then_: Box<Exp>,
-        else_: Box<Exp>,
+        cond: Box<Self>,
+        then_: Box<Self>,
+        else_: Box<Self>,
     },
     While {
-        cond: Box<Exp>,
-        body: Box<Exp>,
+        cond: Box<Self>,
+        body: Box<Self>,
     },
     Let {
         var: VarName,
-        expr: Box<Exp>,
+        expr: Box<Self>,
     },
     Set {
         var: VarName,
-        expr: Box<Exp>,
+        expr: Box<Self>,
     },
     Call {
         name: VarName,
-        args: Vec<Exp>,
+        args: Vec<Self>,
     },
     BinOp {
-        op: CoreOp,
-        left: Box<Exp>,
-        right: Box<Exp>
+        op: BinOp,
+        left: Box<Self>,
+        right: Box<Self>
     },
     UnOp {
         op: UnOp,
-        arg: Box<Exp>,
+        arg: Box<Self>,
     },
 }

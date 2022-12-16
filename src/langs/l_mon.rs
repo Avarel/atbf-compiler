@@ -1,6 +1,4 @@
-use crate::common::{UnOp, VarName};
-
-pub use super::l_shrink::CoreOp;
+use crate::common::{UnOp, VarName, CoreOp};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Atm {
@@ -14,24 +12,24 @@ pub enum Atm {
 pub enum Exp {
     Atm(Atm),
     Block {
-        body: Vec<Exp>,
+        body: Vec<Self>,
     },
     If {
-        cond: Box<Exp>,
-        then_: Box<Exp>,
-        else_: Box<Exp>,
+        cond: Box<Self>,
+        yes: Box<Self>,
+        no: Box<Self>,
     },
     While {
-        cond: Box<Exp>,
-        body: Box<Exp>,
+        cond: Box<Self>,
+        body: Box<Self>,
     },
     Let {
         var: VarName,
-        expr: Box<Exp>,
+        expr: Box<Self>,
     },
     Set {
         var: VarName,
-        expr: Box<Exp>,
+        expr: Box<Self>,
     },
     Call {
         name: VarName,

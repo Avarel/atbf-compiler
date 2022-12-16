@@ -3,11 +3,12 @@ extern crate pom;
 use pom::parser::*;
 use pom::Error;
 
+use crate::common::ArithOp;
 use crate::common::BinOp;
 use crate::common::CmpOp;
+use crate::common::LogicOp;
 use crate::common::UnOp;
 
-use super::lang_parse;
 use super::lang_parse::Exp;
 use super::lang_parse::Spanned;
 use super::lexer::Token;
@@ -133,8 +134,8 @@ fn factor<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
 
 fn sum<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
     let ops = one_of(&[Token::Plus, Token::Minus]).map(|t| match t.inner {
-        Token::Plus => lang_parse::CoreOp::Bin(BinOp::Add),
-        Token::Minus => lang_parse::CoreOp::Bin(BinOp::Sub),
+        Token::Plus => BinOp::Arith(ArithOp::Add),
+        Token::Minus => BinOp::Arith(ArithOp::Sub),
         _ => unreachable!(),
     });
     (factor() + (ops + factor()).repeat(0..)).map(|(left, right)| {
@@ -161,14 +162,16 @@ fn comp<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
         Token::Le,
         Token::Lt,
     ])
-    .map(|t| match t.inner {
-        Token::Eq => lang_parse::CoreOp::Cmp(CmpOp::Eq),
-        Token::Neq => lang_parse::CoreOp::Cmp(CmpOp::Neq),
-        Token::Ge => lang_parse::CoreOp::Cmp(CmpOp::Ge),
-        Token::Gt => lang_parse::CoreOp::Cmp(CmpOp::Gt),
-        Token::Le => lang_parse::CoreOp::Cmp(CmpOp::Le),
-        Token::Lt => lang_parse::CoreOp::Cmp(CmpOp::Lt),
-        _ => unreachable!(),
+    .map(|t| {
+        BinOp::Cmp(match t.inner {
+            Token::Eq => CmpOp::Eq,
+            Token::Neq => CmpOp::Neq,
+            Token::Ge => CmpOp::Ge,
+            Token::Gt => CmpOp::Gt,
+            Token::Le => CmpOp::Le,
+            Token::Lt => CmpOp::Lt,
+            _ => unreachable!(),
+        })
     });
     (sum() + (ops + sum()).repeat(0..)).map(|(left, right)| {
         right.into_iter().fold(left, |left, (op, right)| {
@@ -191,7 +194,7 @@ fn conjunct<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
             let span = left.span.start..right.span.end;
             Spanned::new(
                 Exp::BinOp {
-                    op: lang_parse::CoreOp::And,
+                    op: BinOp::Logic(LogicOp::And),
                     left: Box::new(left),
                     right: Box::new(right),
                 },
@@ -207,7 +210,7 @@ fn disjunct<'a>() -> Parser<'a, Spanned<Token<'a>>, Spanned<Exp>> {
             let span = left.span.start..right.span.end;
             Spanned::new(
                 Exp::BinOp {
-                    op: lang_parse::CoreOp::Or,
+                    op: BinOp::Logic(LogicOp::Or),
                     left: Box::new(left),
                     right: Box::new(right),
                 },

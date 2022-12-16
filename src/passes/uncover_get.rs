@@ -15,7 +15,7 @@ fn collect_set_vars(exp: &In) -> HashSet<VarName> {
             In::Int(_) => (),
             In::Var(_) => (),
             In::Block { body } => body.into_iter().for_each(|a| inner(a, set)),
-            In::If { cond, then_, else_ } => {
+            In::If { cond, yes: then_, no: else_ } => {
                 inner(cond, set);
                 inner(then_, set);
                 inner(else_, set)
@@ -62,10 +62,10 @@ fn uncover_get_exp(exp: In, set: &HashSet<VarName>) -> Out {
         In::Block { body } => Out::Block {
             body: body.into_iter().map(|e| uncover_get_exp(e, set)).collect(),
         },
-        In::If { cond, then_, else_ } => Out::If {
+        In::If { cond, yes: then_, no: else_ } => Out::If {
             cond: uncover_box(cond, set),
-            then_: uncover_box(then_, set),
-            else_: uncover_box(else_, set),
+            yes: uncover_box(then_, set),
+            no: uncover_box(else_, set),
         },
         In::While { cond, body } => Out::While {
             cond: uncover_box(cond, set),

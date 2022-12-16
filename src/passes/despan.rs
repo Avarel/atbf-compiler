@@ -1,22 +1,10 @@
-use crate::common::map_box;
 use crate::parser::lang_parse::Spanned;
 
 use crate::langs::l_ast as lout;
 use crate::parser::lang_parse as lin;
 
-fn convert_op(op: lin::CoreOp) -> lout::CoreOp {
-    type In = lin::CoreOp;
-    type Out = lout::CoreOp;
-    match op {
-        In::Bin(b) => Out::Base(b),
-        In::Cmp(c) => Out::Cmp(c),
-        In::Or => Out::Or,
-        In::And => Out::And,
-    }
-}
-
 fn despan_box(b: Box<Spanned<lin::Exp>>) -> Box<lout::Exp> {
-    map_box(b, despan)
+    Box::new(despan(*b))
 }
 
 pub fn despan(exp: Spanned<lin::Exp>) -> lout::Exp {
@@ -52,7 +40,7 @@ pub fn despan(exp: Spanned<lin::Exp>) -> lout::Exp {
             args: args.into_iter().map(despan).collect(),
         },
         In::BinOp { op, left, right } => Out::BinOp {
-            op: convert_op(op),
+            op,
             left: despan_box(left),
             right: despan_box(right),
         },
